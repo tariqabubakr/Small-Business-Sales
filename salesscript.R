@@ -18,7 +18,7 @@ baskets_revenue
 
 total_sales <- business_retailsales2$Total_Sales
 
-
+#plotting business's sales
 myts <- ggplot(business_retailsales2, aes(x=Month, y=Total_Sales)) + geom_line()
 myts <- myts + ylab("Sales") + labs(title="Total Sales by Year") + theme_classic()
 
@@ -26,6 +26,7 @@ as.Date(business_retailsales2$Month, format="%m/%d")
 
 sales_ts <- ts(total_sales, start=2017,end=2019,frequency=4)
 
+#consolidating the data so that each row is a unique product type
 df <- sqldf(
             "SELECT 
             Product_Type,
@@ -36,6 +37,7 @@ df <- sqldf(
             FROM business GROUP BY Product_Type"
             )
 
+#finding the top 6 selling product types
 df_6 <- sqldf(
             "SELECT Product_Type,
             SUM(Net_Quantity) AS Net_Quantity,
@@ -48,14 +50,17 @@ df_6 <- sqldf(
             DESC LIMIT 6"
             )
 
+#using a bar plot to visuaize the top 6 product types by sales volume
 b <- ggplot(df_5, aes(Product_Type,Total_Net_Sales)) + geom_bar(stat="identity",color="#FF6666") + xlab("Product Type") + ylab("Total Sales") + theme_minimal()
 
+#creating table of the rates that each product types were returned
 rates <- sqldf("CREATE TABLE rates 
                (Product_Type VARCHAR(50),
                 Rate_of_Return FLOAT
                 )
                ")
 
+#inserting rates of return into new ly created table
 rates <- sqldf("INSERT INTO rates (Product_Type,Rate_of_Return)
                 VALUES ('Baskets',0.31),
                        ('Christmas',0.43),
@@ -65,11 +70,33 @@ rates <- sqldf("INSERT INTO rates (Product_Type,Rate_of_Return)
                        ('Kitchen',0.02)
                ")
 
+#selecting all months where total sales were greater than 11,000
 holiday <- sqldf("SELECT Date,Total_Orders,Total_Sales 
                  FROM business_retailsales2 
                  WHERE Total_Sales > 11000 
                  ORDER BY Total_Sales DESC
                  ")
+
+#creating a time series of the business's sales
+y <- ts(business_retailsales2[,8],start=c(2017,1),end=c(2019,10), frequency=12) 
+
+#forecast library
+library(fpp2)
+fit <- snaive(DY)
+summary(fit)
+checkresiduals(fit)
+
+fit_ets <- ets(y)
+print(summary(fit_ets))
+
+fit_arima <- auto.arima(y,d=1,D=1,stepwise=FALSE,approximation=FALSE,trace=TRUE)
+print(summary(fit_arima))
+checkresiduals(fit_arima)
+  
+#forecasting future sales
+fcst <- forecast(fit_arima,h=38)
+autoplot(fcst)
+fcst
 
 
 
