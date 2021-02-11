@@ -73,9 +73,20 @@ rates <- sqldf("INSERT INTO rates (Product_Type,Rate_of_Return)
 #selecting all months where total sales were greater than 11,000
 holiday <- sqldf("SELECT Date,Total_Orders,Total_Sales 
                  FROM business_retailsales2 
-                 WHERE Total_Sales > 11000 
+                 WHERE Month IN ('November','December') 
                  ORDER BY Total_Sales DESC
                  ")
+
+non_holiday <- sqldf("SELECT Date,Total_Orders,Total_Sales 
+                     FROM business_retailsales2 
+                     WHERE Month NOT IN ('November','December') 
+                     ORDER BY Total_Sales DESC
+                     ")
+
+sum(holiday$Total_Sales) / 6
+[1] 19142.1
+sum(non_holiday$Total_Sales) / 30
+[1] 8937.109
 
 #creating a time series of the business's sales
 y <- ts(business_retailsales2[,8],start=c(2017,1),end=c(2019,10), frequency=12) 
@@ -96,7 +107,11 @@ checkresiduals(fit_arima)
 #forecasting future sales
 fcst <- forecast(fit_arima,h=38)
 autoplot(fcst)
-fcst
+fcst 
+
+f <- ts(business_retailsales2[,10],start=c(2017,1),end=c(2019,10),frequency=12)
+
+aov <- sum(business_retailsales2$Total_Sales) / sum(business_retailsales2$Total_Orders)
 
 
 
